@@ -41,6 +41,7 @@ class AIPlayer(Player):
         self.myConstr = None
         self.foodDist = None
         self.enemyFoodDist = None
+        self.maxDepth = 3
 
         self.bestFoodConstr = None
         self.bestFood = None
@@ -119,13 +120,16 @@ class AIPlayer(Player):
         frontierNodes.append(StateNode(None,currentState,0,0,None))
 
         bn = None
-        for x in range(5):
-            if len(frontierNodes) < 1:
-                break
-            bn = bestNode(frontierNodes)
-            frontierNodes.remove(bn)
-            expandedNodes.append(bn)
-            frontierNodes.extend(self.expandNode(bn))
+        for x in range(self.maxDepth):
+            
+            pass
+        # for x in range(5):
+            # if len(frontierNodes) < 1:
+                # break
+            # bn = minMaxNode(frontierNodes,minimum=True)
+            # frontierNodes.remove(bn)
+            # expandedNodes.append(bn)
+            # frontierNodes.extend(self.expandNode(bn))
 
         return parentMove(bn)
 
