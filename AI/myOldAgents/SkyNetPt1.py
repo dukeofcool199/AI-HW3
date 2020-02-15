@@ -1,8 +1,7 @@
 import random
 import sys
 
-sys.path.append("./..")  # so other modules can be found in parent dir
-# sys.path.insert(2,'..')
+sys.path.append("..")  # so other modules can be found in parent dir
 from Player import *
 from Constants import *
 from Construction import CONSTR_STATS
@@ -10,7 +9,6 @@ from Ant import UNIT_STATS
 from Move import Move
 from GameState import *
 from AIPlayerUtils import *
-from operator import attrgetter
 import math
 
 from Game import *
@@ -35,7 +33,7 @@ class AIPlayer(Player):
     #   cpy           - whether the player is a copy (when playing itself)
     ##
     def __init__(self, inputPlayerId):
-        super(AIPlayer, self).__init__(inputPlayerId, "Archie_Samson_Schrader")
+        super(AIPlayer, self).__init__(inputPlayerId, "SkynetPt1")
         self.myFood = None
         self.isFirstTurn = None
         self.myConstr = None
@@ -113,21 +111,27 @@ class AIPlayer(Player):
         if self.isFirstTurn:  # calc food costs
             self.firstTurn(currentState)
 
-        frontierNodes = []
-        expandedNodes = []
+        movements = listAllMovementMoves(currentState)
+        builds = listAllBuildMoves(currentState)
+        moves = builds + movements
+        if len(movements) == 0:
+            moves.append(Move(END))
 
-        frontierNodes.append(StateNode(None,currentState,0,0,None))
+        gameStates = map(lambda move: (getNextState(currentState, move), move), moves)
 
-        bn = None
-        for x in range(5):
-            if len(frontierNodes) < 1:
-                break
-            bn = bestNode(frontierNodes)
-            frontierNodes.remove(bn)
-            expandedNodes.append(bn)
-            frontierNodes.extend(self.expandNode(bn))
+        nodes = list(map(lambda stateMove: SkynetNode(stateMove[1], stateMove[0], 0, \
+                              self.heuristicStepsToGoal(stateMove[0]), None), gameStates))
 
-        return parentMove(bn)
+        return bestMove(nodes)
+
+        # selectedMove = moves[random.randint(0, len(moves) - 1)];
+        #
+        # # don't do a build move if there are already 3+ ants
+        # numAnts = len(currentState.inventories[currentState.whoseTurn].ants)
+        # while (selectedMove.moveType == BUILD and numAnts >= 3):
+        #     selectedMove = moves[random.randint(0, len(moves) - 1)];
+        #
+        # return selectedMove
 
     ##
     # firstTurn
@@ -288,7 +292,14 @@ class AIPlayer(Player):
             foodLeft += UNIT_STATS[WORKER][COST]
             workerCount = 1
 
-        # Prevent queen from jamming workers
+        # Could not get rid of three worker jams without search
+        # So this is an arbitrary penalty to punish the agent for building extra workers
+        # TODO: Remove for part 2
+        if workerCount > 1:
+            adjustment += 20
+            workerCount = 1
+
+            # Prevent queen from jamming workers
         queen = inventory.getQueen()
         adjustment += 1.0 / (approxDist(queen.coords, self.bestFoodConstr.coords) + 1) + 1.0 / (
                     approxDist(queen.coords, self.bestFood.coords) + 1)
@@ -393,29 +404,7 @@ class AIPlayer(Player):
         return cost
 
 
-    ##
-    # expandNode
-    # params:
-    #  node: the node to be expanded
-    # Returns:
-    #  a list of new frontier nodes from the input node
-    def expandNode(self,node):
-        ## ensures the game does not continue if no moves can be made
-        movements = listAllMovementMoves(node.state)
-        builds = listAllBuildMoves(node.state)
-        moves = builds + movements
-        if len(movements) == 0:
-            moves.append(Move(END))
-        gameStates = map(lambda move: (getNextState(node.state, move), move), moves)
-
-        nodeList = list(map(lambda stateMove: StateNode(stateMove[1], stateMove[0], node.depth+1, \
-                              self.heuristicStepsToGoal(stateMove[0]), node), gameStates))
-        return nodeList
-
-##
-# StateNode
-# a class to represent the state nodes for A* search algorithm
-class StateNode:
+class SkynetNode:
     def __init__(self, move, state, depth, heuristic, parent):
         self.move = move
         self.state = state
@@ -423,34 +412,14 @@ class StateNode:
         self.cost = heuristic + depth
         self.parent = parent
 
+
 ##
-#   bestNode
+#   bestMove
 # Param: list of nodes
 # returns lowest cost node
-def bestNode(nodes):
-    # move = min(nodes, key=attrgetter('cost'))
-    # return move
-
-    if len(nodes) < 2:
-        return nodes[0]
-    else:
-        bestNode = nodes[0]
-        for node in nodes[1:]:
-            if node.cost < bestNode.cost:
-                bestNode = node
-
-    return bestNode
-
-##
-#   parentMove()
-# param(node with best move)
-# returns move of the parent node of the node that had the best score
-def parentMove(node):
-    if node.depth == 1:
-        return node.move
-    else:
-        return parentMove(node.parent)
-
+def bestMove(nodes):
+    move = min(nodes, key=lambda node: node.cost)
+    return move.move
 
 
 ###################################################################
@@ -493,19 +462,23 @@ if workerPenalty != 1:
     print("Error with workerPenalty.  Value: " + workerPenalty + " Should be 1")
 
 
-##Test bestNode return from node list
+##Test bestMove return from node list
 workerBuild = Move(BUILD, [basicState.inventories[0].getAnthill().coords], WORKER)
 queenMove = Move(MOVE_ANT, [basicState.inventories[0].getQueen().coords], None)
 
 nextState1 = getNextState(basicState,queenMove)
 nextState2 = getNextState(basicState,workerBuild)
 
-nodeList = [StateNode(queenMove,basicState,0,testPlayer.heuristicStepsToGoal(nextState1),None)
-    ,StateNode(workerBuild,basicState,0,testPlayer.heuristicStepsToGoal(nextState2),None)]
+nodeList = [SkynetNode(queenMove,basicState,0,testPlayer.heuristicStepsToGoal(nextState1),None)
+    ,SkynetNode(workerBuild,basicState,0,testPlayer.heuristicStepsToGoal(nextState2),None)]
 
-testPlayer.expandNode(nodeList[0])
-testPlayer.getMove(basicState)
+returnedMove = bestMove(nodeList)
+if returnedMove.coordList != [(0,0)] or returnedMove.moveType != 0 or returnedMove.buildType != None:
+    print("Error with bestMove Return")
 
-returnedNode = bestNode(nodeList)
-if returnedNode.move.coordList != [(0,0)] or returnedNode.move.moveType != 0 or returnedNode.move.buildType != None:
-    print("Error with bestNode Return")
+
+
+
+
+
+

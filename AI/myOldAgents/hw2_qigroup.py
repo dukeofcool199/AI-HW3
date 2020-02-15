@@ -32,9 +32,7 @@ class AIPlayer(Player):
     #   cpy           - whether the player is a copy (when playing itself)
     ##
     def __init__(self, inputPlayerId):
-        super(AIPlayer, self).__init__(inputPlayerId, "Mitchell_Marsh_old")
-        self.myId = inputPlayerId
-        self.enemyId = 1 - inputPlayerId
+        super(AIPlayer, self).__init__(inputPlayerId, "Mitchell_Marsh")
 
     ##
     # getPlacement
@@ -310,7 +308,7 @@ def expandNode(node):
     new_nodes = []
 
     for move in moves:
-        next_state = getNextStateAdversarial(node["state"], move)
+        next_state = getNextState(node["state"], move)
         new_nodes.append(
             {"move": move,
              "state": next_state,
@@ -319,9 +317,6 @@ def expandNode(node):
              "ref": node})
 
     return new_nodes
-
-def miniMax(node):
-    pass
 
 
 ##
@@ -332,21 +327,18 @@ def miniMax(node):
 #
 # Parameters:
 #   nodes - a list of nodes to search through.
-#   maximum - if true then find the maximum node else find the minimum node 
 #
 # Return: The move value from the node with the highest utility evaluation.
 #         This will be the next move performed.
 ##
-def bestMove(nodes,maximum=True):
-    if maximum:
-        best_node = max(nodes, key=lambda node: node["eval"])
-    else:
-        best_node = min(nodes, key=lambda node: node["eval"])
+def bestMove(nodes):
+    best_node = min(nodes, key=lambda node: node["eval"])
 
     while best_node["ref"]["ref"] is not None:
         best_node = best_node["ref"]
 
     return best_node["move"]
+
 
 ##
 # isNode
@@ -408,7 +400,7 @@ def runTest():
     testState = basicNode['state']
     for test in range(100):
         newMove = random.choice(listAllLegalMoves(testState))
-        testState = getNextStateAdversarial(testState, newMove)
+        testState = getNextState(testState, newMove)
 
         heuy = heuristicStepsToGoal(testState)
         if not isinstance(heuy, numbers.Number):
