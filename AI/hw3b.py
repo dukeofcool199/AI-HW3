@@ -25,6 +25,7 @@ from Game import *
 # Variables:
 #   playerId - The id of the player.
 ##
+
 class AIPlayer(Player):
 
     # __init__
@@ -41,7 +42,8 @@ class AIPlayer(Player):
         self.myConstr = None
         self.foodDist = None
         self.enemyFoodDist = None
-        self.maxDepth = 3
+        self.MAX_DEPTH = 3
+        self.myID = inputPlayerId
 
         self.bestFoodConstr = None
         self.bestFood = None
@@ -114,21 +116,22 @@ class AIPlayer(Player):
         if self.isFirstTurn:  # calc food costs
             self.firstTurn(currentState)
 
-        frontierNodes = []
-        expandedNodes = []
+        self.miniMax(StateNode(None,currentState,0,0,None))
+        
+        # frontierNodes = []
+        # expandedNodes = []
 
-        frontierNodes.append(StateNode(None,currentState,0,0,None))
 
-        bn = None
-        for x in range(5):
-            if len(frontierNodes) < 1:
-                break
-            bn = minMaxNode(frontierNodes,minimum=True)
-            frontierNodes.remove(bn)
-            expandedNodes.append(bn)
-            frontierNodes.extend(self.expandNode(bn))
+        # bn = None
+        # for x in range(5):
+            # if len(frontierNodes) < 1:
+                # break
+            # bn = minMaxNode(frontierNodes,minimum=True)
+            # frontierNodes.remove(bn)
+            # expandedNodes.append(bn)
+            # frontierNodes.extend(self.expandNode(bn))
 
-        return parentMove(bn)
+        # return parentMove(bn)
 
     ##
     # firstTurn
@@ -412,6 +415,30 @@ class AIPlayer(Player):
         nodeList = list(map(lambda stateMove: StateNode(stateMove[1], stateMove[0], node.depth+1, \
                               self.heuristicStepsToGoal(stateMove[0]), node), gameStates))
         return nodeList
+
+    ## # miniMax
+    # params:
+    # node: the node that is being examined for the score
+    # returns:
+    # the node with the lowest score at the end
+    def miniMax(self,node):
+        if node.depth == self.MAX_DEPTH: #or getwinner(node.state) is not None:
+            return node
+
+        if node.state.whoseTurn == self.myID:
+            #a node with a score that is arbitrarily large
+            minScoreNode = StateNode(None,None,0,999999999,None)
+            for childNode in self.expandNode(node):
+                newScoreNode = self.miniMax(childNode)
+                minScoreNode = min([minScoreNode,newScoreNode], key=attrgetter('cost'))
+            return minScoreNode
+        else:
+            #a node with a score that is arbitrarily small
+            maxScoreNode = StateNode(None,None,0,-999999999,None)
+            for childNode in self.expandNode(node):
+                newScoreNode = self.miniMax(childNode)
+                maxScoreNode = max([maxScoreNode,newScoreNode], key=attrgetter('cost'))
+            return maxScoreNode
 
 ##
 # StateNode
