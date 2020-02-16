@@ -120,16 +120,13 @@ class AIPlayer(Player):
         frontierNodes.append(StateNode(None,currentState,0,0,None))
 
         bn = None
-        for x in range(self.maxDepth):
-            
-            pass
-        # for x in range(5):
-            # if len(frontierNodes) < 1:
-                # break
-            # bn = minMaxNode(frontierNodes,minimum=True)
-            # frontierNodes.remove(bn)
-            # expandedNodes.append(bn)
-            # frontierNodes.extend(self.expandNode(bn))
+        for x in range(5):
+            if len(frontierNodes) < 1:
+                break
+            bn = minMaxNode(frontierNodes,minimum=True)
+            frontierNodes.remove(bn)
+            expandedNodes.append(bn)
+            frontierNodes.extend(self.expandNode(bn))
 
         return parentMove(bn)
 
@@ -428,30 +425,36 @@ class StateNode:
         self.parent = parent
 
 ##
-#   bestNode
+#   minMaxNode
 # Param: list of nodes
-# returns lowest cost node
+# returns the lowest or highest cost node based on what you want
 def minMaxNode(nodes,minimum=True):
-    # move = min(nodes, key=attrgetter('cost'))
-    # return move
     if minimum:
-        if len(nodes) < 2:
-            return nodes[0]
-        else:
-            bestNode = nodes[0]
-            for node in nodes[1:]:
-                if node.cost < bestNode.cost:
-                    bestNode = node
+        move = min(nodes, key=attrgetter('cost'))
+        return move
     else:
-        if len(nodes) < 2:
-            return nodes[0]
-        else:
-            bestNode = nodes[0]
-            for node in nodes[1:]:
-                if node.cost > bestNode.cost:
-                    bestNode = node
+        move = max(nodes, key=attrgetter('cost'))
+        return move
 
-    return bestNode
+
+    # if minimum:
+        # if len(nodes) < 2:
+            # return nodes[0]
+        # else:
+            # bestNode = nodes[0]
+            # for node in nodes[1:]:
+                # if node.cost < bestNode.cost:
+                    # bestNode = node
+    # else:
+        # if len(nodes) < 2:
+            # return nodes[0]
+        # else:
+            # bestNode = nodes[0]
+            # for node in nodes[1:]:
+                # if node.cost > bestNode.cost:
+                    # bestNode = node
+
+    # return bestNode
 
 ##
 #   parentMove()
