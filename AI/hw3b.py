@@ -422,6 +422,7 @@ class AIPlayer(Player):
     # returns:
     # the node with the lowest score at the end
     def miniMax(self,node):
+        node.printNode()
         if node.depth == self.MAX_DEPTH: #or getwinner(node.state) is not None:
             return node
 
@@ -450,6 +451,11 @@ class StateNode:
         self.depth = depth
         self.cost = heuristic + depth
         self.parent = parent
+
+    def printNode(self):
+        print("move: {}".format(self.move))
+        print("depth: {}".format(self.depth))
+        print("cost: {}".format(self.cost))
 
 ##
 #   minMaxNode
