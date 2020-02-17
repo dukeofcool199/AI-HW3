@@ -1,5 +1,4 @@
 import os, re, sys, math, multiprocessing, time, random
-sys.path.insert(1,'./AI/')
 import HumanPlayer
 from Construction import *
 from Constants import *
@@ -1449,8 +1448,10 @@ class Game(object):
             # change target to access appropriate players locations
             aTarget = self.state.coordLookup(targets[i], self.state.whoseTurn)
             # make sure nothing is there yet
-            if not self.state.board[aTarget[0]][aTarget[1]].constr == None:
+            if self.state.board[aTarget[0]][aTarget[1]].constr:
                 return False
+            # This item should be placed and this location becomes occupied
+            self.state.board[aTarget[0]][aTarget[1]].constr = items[i]
 
         return True
 
