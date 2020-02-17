@@ -12,8 +12,12 @@ from GameState import *
 from AIPlayerUtils import *
 from operator import attrgetter
 import math
+import ipdb
 
 from Game import *
+
+f = open('out.log','w')
+sys.stdout = f
 
 #########WE ARE THE MINUMUM PLAYER ####################
 ##
@@ -26,6 +30,7 @@ from Game import *
 #   playerId - The id of the player.
 ##
 
+MYID = None
 class AIPlayer(Player):
 
     # __init__
@@ -44,6 +49,7 @@ class AIPlayer(Player):
         self.enemyFoodDist = None
         self.MAX_DEPTH = 3
         self.myID = inputPlayerId
+        MYID = inputPlayerId
 
         self.bestFoodConstr = None
         self.bestFood = None
@@ -422,6 +428,7 @@ class AIPlayer(Player):
     # returns:
     # the node with the lowest score at the end
     def miniMax(self,node):
+        # ipdb.set_trace()
         node.printNode()
         if node.depth == self.MAX_DEPTH: #or getwinner(node.state) is not None:
             return node
@@ -456,6 +463,10 @@ class StateNode:
         print("move: {}".format(self.move))
         print("depth: {}".format(self.depth))
         print("cost: {}".format(self.cost))
+        if self.state.whoseTurn == MYID:
+            print("player: me")
+        else:
+            print("player: enemy")
 
 ##
 #   minMaxNode
