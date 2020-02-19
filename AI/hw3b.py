@@ -29,7 +29,10 @@ sys.stdout = f
 # Variables:
 #   playerId - The id of the player.
 ##
-
+FOOD_WEIGHT = None
+CARRYING = None
+CLOSEST_FOOD = None
+CLOSEST_PLACE = None 
 MYID = None
 class AIPlayer(Player):
 
@@ -206,7 +209,6 @@ class AIPlayer(Player):
         if getWinner(state) is not None:
             return 0
 
-
         score = 0.0
         me = state.whoseTurn
         enemy = 1 - me
@@ -291,12 +293,9 @@ class AIPlayer(Player):
             if ant.type != QUEEN:
                 score += UNIT_STATS[ant.type][COST]*FOOD_WEIGHT
             else:
-                score += ant.health*FOOD_WEIGHT/UNIT_STATS[ant.type][HEALTH]*11
+                score += ant.health*FOOD_WEIGHT/UNIT_STATS[ant.type][HEALTH]*11 
 
-
-        return score
-
-
+        return score 
 
 
     ##
