@@ -122,7 +122,9 @@ class AIPlayer(Player):
         if self.isFirstTurn:  # calc food costs
             self.firstTurn(currentState)
 
-        self.miniMax(StateNode(None,currentState,0,0,None))
+        move = self.miniMax(StateNode(None,currentState,0,0,None))
+        newMove = parentMove(move)
+        return newMove
         
         # frontierNodes = []
         # expandedNodes = []
@@ -182,8 +184,123 @@ class AIPlayer(Player):
             self.bestAligned = True
             self.alignmentAxis = 'y'
 
+
+
     ##
-    # heuristicStepsToGoal
+    # heuristiStepsToGoal_qi
+    #heuristiStepsToGoal_qi
+    # Description: called to determine the utility of making a certain move.
+    # A state is passed in and certain conditions are rewarded or given
+    # nextgative rewards. These positive and negative values are added or subtracted
+    # from the score value.
+    #
+    # Parameters:
+    #   state - the state of the game at this point in time.
+    #
+    # Return: The "score" value, or how good the state is. The higher the score,
+    # the closer the state is deemed to being a win state.
+    ##
+
+    def heuristiStepsToGoal_qi(self,state):
+        # winning handled by A* search
+        if getWinner(state) is not None:
+            return 0
+
+
+        score = 0.0
+        me = state.whoseTurn
+        enemy = 1 - me
+        global FOOD_WEIGHT
+        global CARRYING
+        global CLOSEST_FOOD
+        global CLOSEST_PLACE
+        # create targets
+        hill = getConstrList(state, me, (ANTHILL,))[0]
+        hillAndTunnel = getConstrList(state, me, (ANTHILL, TUNNEL))
+        foods = getConstrList(state, None, (FOOD,))
+
+        enemyAnts = getAntList(state, enemy)
+
+        # Weight values for how much utility certain ants or statuses are worth
+        WORKER_ANT_WEIGHT = 1
+        if FOOD_WEIGHT == None or not any(CLOSEST_FOOD.coords == food.coords for food in foods):
+            CARRYING, CLOSEST_FOOD, CLOSEST_PLACE = \
+                min(((stepsToReach(state, food.coords, place.coords), food, place)
+                     for food in foods for place in hillAndTunnel),
+                    key=lambda vals: vals[0])
+            FOOD_WEIGHT = CARRYING * 2
+
+
+        # Useful pointers
+        myInv = state.inventories[me]
+        score -= myInv.foodCount * FOOD_WEIGHT
+        enemyInv = state.inventories[enemy]
+
+        ants = getAntList(state, me, (WORKER, DRONE))
+
+        numWorkers = 0
+        numDrones=0
+        numSoldiers=0
+
+        for ant in ants:
+            # Assign targets for workers
+            if ant.type == WORKER:
+                numWorkers += 1
+                offset = CARRYING
+                if ant.carrying:
+                    target = CLOSEST_PLACE
+                    score -= CARRYING
+                    score -= ant.coords[0] * .0001
+                else:
+                    target = CLOSEST_FOOD
+                    score += ant.coords[0] * .0001
+
+            # Assign targets for drones
+            elif ant.type == DRONE:
+                # Have worker attack drone first, then queen
+                numDrones += 1
+                workers = getAntList(state, enemy, (WORKER,))
+                if len(workers) == 0:
+                    target = enemyInv.getQueen()
+                else:
+                    target = workers[0]
+                offset = stepsToReach(state, hill.coords, target.coords)
+
+            # # Assign targets for soldiers
+            elif ant.type == SOLDIER:
+                # Have soldier go after the queen
+                numSoldiers += 1
+                target = enemyInv.getQueen()
+                offset = stepsToReach(state, hill.coords, target.coords)
+
+            # Keep the ants moving towards their targets by awarding
+            # utility for proximity.
+            score -= offset - stepsToReach(state, ant.coords, target.coords)
+
+        if numWorkers >= 2:
+            score += FOOD_WEIGHT * 3 * numWorkers
+        elif numWorkers == 0:
+            score += FOOD_WEIGHT * 11
+
+        eneWorkers = getAntList(state, enemy, (WORKER,))
+        if (numDrones != 0 and len(eneWorkers) > 0) or len(eneWorkers)==0:
+            score -= FOOD_WEIGHT * 3
+
+        # Award utility for killing enemy ants
+        for ant in enemyAnts:
+            if ant.type != QUEEN:
+                score += UNIT_STATS[ant.type][COST]*FOOD_WEIGHT
+            else:
+                score += ant.health*FOOD_WEIGHT/UNIT_STATS[ant.type][HEALTH]*11
+
+
+        return score
+
+
+
+
+    ##
+    # heuristicStepsToGoal_ryan_Kollin
     # Description: Calculates the number of steps required to get to the goal
     # Most of this function's code is to prevent a stalemate
     # A tiny amount of it actually wins the game
@@ -192,7 +309,7 @@ class AIPlayer(Player):
     #   currentState - A clone of the current state (GameState)
     #
     #
-    def heuristicStepsToGoal(self, currentState):
+    def heuristicStepsToGoal_ryan_Kollin(self, currentState):
         # Get common variables
         me = currentState.whoseTurn
         workers = getAntList(currentState, me, (WORKER,))
@@ -298,7 +415,14 @@ class AIPlayer(Player):
             foodLeft += UNIT_STATS[WORKER][COST]
             workerCount = 1
 
-        # Prevent queen from jamming workers
+        # Could not get rid of three worker jams without search
+        # So this is an arbitrary penalty to punish the agent for building extra workers
+        # TODO: Remove for part 2
+        if workerCount > 1:
+            adjustment += 20
+            workerCount = 1
+
+            # Prevent queen from jamming workers
         queen = inventory.getQueen()
         adjustment += 1.0 / (approxDist(queen.coords, self.bestFoodConstr.coords) + 1) + 1.0 / (
                     approxDist(queen.coords, self.bestFood.coords) + 1)
@@ -419,7 +543,9 @@ class AIPlayer(Player):
         gameStates = map(lambda move: (getNextStateAdversarial(node.state, move), move), moves)
 
         nodeList = list(map(lambda stateMove: StateNode(stateMove[1], stateMove[0], node.depth+1, \
-                              self.heuristicStepsToGoal(stateMove[0]), node), gameStates))
+                              self.heuristiStepsToGoal_qi(stateMove[0]),node), gameStates))
+        # nodeList = list(map(lambda stateMove: StateNode(stateMove[1], stateMove[0], node.depth+1, \
+                              # self.heuristiStepsToGoal_qi(stateMove[0]), node), gameStates))
         return nodeList
 
     ## # miniMax
@@ -539,9 +665,9 @@ if moveCost != 1.0:
     print("Error with movesToReach.  Value: " + moveCost + " Should be 1.0")
 
 
-heuristic = testPlayer.heuristicStepsToGoal(basicState)
+heuristic = testPlayer.heuristicStepsToGoal_ryan_Kollin(basicState)
 if heuristic != 9.0:
-    print("Error with heuristicStepsToGoal.  Value: " + heuristic + " Should be 9.0")
+    print("Error with heuristicStepsToGoal_ryan_Kollin.  Value: " + heuristic + " Should be 9.0")
 
 workerCost = testPlayer.getWorkerCost(basicState,(0,1),False)
 if workerCost != 8.0:
@@ -559,8 +685,8 @@ queenMove = Move(MOVE_ANT, [basicState.inventories[0].getQueen().coords], None)
 nextState1 = getNextStateAdversarial(basicState,queenMove)
 nextState2 = getNextStateAdversarial(basicState,workerBuild)
 
-nodeList = [StateNode(queenMove,basicState,0,testPlayer.heuristicStepsToGoal(nextState1),None)
-    ,StateNode(workerBuild,basicState,0,testPlayer.heuristicStepsToGoal(nextState2),None)]
+nodeList = [StateNode(queenMove,basicState,0,testPlayer.heuristicStepsToGoal_ryan_Kollin(nextState1),None)
+    ,StateNode(workerBuild,basicState,0,testPlayer.heuristicStepsToGoal_ryan_Kollin(nextState2),None)]
 
 testPlayer.expandNode(nodeList[0])
 testPlayer.getMove(basicState)
