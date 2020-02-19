@@ -227,7 +227,7 @@ class AIPlayer(Player):
         WORKER_ANT_WEIGHT = 1
         if FOOD_WEIGHT == None or not any(CLOSEST_FOOD.coords == food.coords for food in foods):
             CARRYING, CLOSEST_FOOD, CLOSEST_PLACE = \
-                min(((stepsToReach(state, food.coords, place.coords), food, place)
+                min(((approxDist(food.coords, place.coords), food, place)
                      for food in foods for place in hillAndTunnel),
                     key=lambda vals: vals[0])
             FOOD_WEIGHT = CARRYING * 2
@@ -266,18 +266,18 @@ class AIPlayer(Player):
                     target = enemyInv.getQueen()
                 else:
                     target = workers[0]
-                offset = stepsToReach(state, hill.coords, target.coords)
+                offset = approxDist(hill.coords, target.coords)
 
             # # Assign targets for soldiers
             elif ant.type == SOLDIER:
                 # Have soldier go after the queen
                 numSoldiers += 1
                 target = enemyInv.getQueen()
-                offset = stepsToReach(state, hill.coords, target.coords)
+                offset = approxDist(hill.coords, target.coords)
 
             # Keep the ants moving towards their targets by awarding
             # utility for proximity.
-            score -= offset - stepsToReach(state, ant.coords, target.coords)
+            score -= offset - approxDist(ant.coords, target.coords)
 
         if numWorkers >= 2:
             score += FOOD_WEIGHT * 3 * numWorkers
