@@ -211,7 +211,7 @@ class AIPlayer(Player):
     def heuristiStepsToGoal_qi(self,state):
         # winning handled by A* search
         if getWinner(state) is not None:
-            return 0
+            return 0 
 
         score = 0.0
         me = state.whoseTurn
@@ -546,10 +546,26 @@ class AIPlayer(Player):
         gameStates = map(lambda move: (getNextStateAdversarial(node.state, move), move), moves)
 
         nodeList = list(map(lambda stateMove: StateNode(stateMove[1], stateMove[0], node.depth+1, \
-                              self.heuristiStepsToGoal_qi(stateMove[0]),node), gameStates))
+                              self.BFGUtility(stateMove[0]),node), gameStates))
         # nodeList = list(map(lambda stateMove: StateNode(stateMove[1], stateMove[0], node.depth+1, \
                               # self.heuristiStepsToGoal_qi(stateMove[0]), node), gameStates))
         return nodeList
+
+
+    def queenUtility(self,state):
+        myInv = getCurrPlayerInventory(state)
+        queen = getAntList(state,self.myID,(QUEEN,))
+        return stepsToReach(state,queen[0].coords,(0,0))
+    
+    def BFGUtility(self,state):
+        myInv = getCurrPlayerInventory(state)
+        workers = getAntList(state,self.myID,(WORKER,))
+        total = 0
+        total += myInv.foodCount * 5
+        # for worker in workers:
+            # total += 
+
+        return total 
 
     ## # miniMax
     # params:
@@ -558,14 +574,18 @@ class AIPlayer(Player):
     # the node with the lowest score at the end
     def miniMax(self,node,alpha,beta):
         # node.printNode()
-        if node.depth == self.MAX_DEPTH: #or getwinner(node.state) is not None:
+        if node.depth == self.MAX_DEPTH: 
             return node
 
+        newNodes = self.expandNode(node)
+        newNodes.sort(key=lambda node: node.cost) 
+        # if len(newNodes) > 1:
+            # newNodes = newNodes[len(newNodes)//2:]
         # considering the heuristic method I AM THE MIN PLAYER
-        if node.state.whoseTurn == self.myID:
+        if node.state.whoseTurn == 1 - self.myID:
             #a node with a score that is arbitrarily large
             minScoreNode = StateNode(None,None,0,999999999,None)
-            for childNode in self.expandNode(node):
+            for childNode in newNodes:
                 newScoreNode = self.miniMax(childNode,alpha,beta)
                 minScoreNode = min([minScoreNode,newScoreNode], key=attrgetter('cost'))
                 beta = min(beta,newScoreNode.cost)
@@ -575,7 +595,7 @@ class AIPlayer(Player):
         else:
             #a node with a score that is arbitrarily small
             maxScoreNode = StateNode(None,None,0,-999999999,None)
-            for childNode in self.expandNode(node):
+            for childNode in newNodes:
                 newScoreNode = self.miniMax(childNode,alpha,beta)
                 maxScoreNode = max([maxScoreNode,newScoreNode], key=attrgetter('cost'))
                 alpha = max(alpha,newScoreNode.cost)
