@@ -125,16 +125,20 @@ class AIPlayer(Player):
         if self.isFirstTurn:  # calc food costs
             self.firstTurn(currentState)
 
-        move = self.miniMax(StateNode(None,currentState,0,0,None))
+        move = self.miniMax(StateNode(None,currentState,0,0,None),-99999999,99999999)
         newMove = parentMove(move)
         return newMove
         
+
+
+        #=============A STAR SEARCH==============================
         # frontierNodes = []
         # expandedNodes = []
 
 
+        # frontierNodes.append(StateNode(None,currentState,0,0,None))
         # bn = None
-        # for x in range(5):
+        # for x in range(6):
             # if len(frontierNodes) < 1:
                 # break
             # bn = minMaxNode(frontierNodes,minimum=True)
@@ -142,7 +146,7 @@ class AIPlayer(Player):
             # expandedNodes.append(bn)
             # frontierNodes.extend(self.expandNode(bn))
 
-        # return parentMove(bn)
+        return parentMove(bn)
 
     ##
     # firstTurn
@@ -417,9 +421,9 @@ class AIPlayer(Player):
         # Could not get rid of three worker jams without search
         # So this is an arbitrary penalty to punish the agent for building extra workers
         # TODO: Remove for part 2
-        if workerCount > 1:
-            adjustment += 20
-            workerCount = 1
+        # if workerCount > 1:
+            # adjustment += 20
+            # workerCount = 1
 
             # Prevent queen from jamming workers
         queen = inventory.getQueen()
@@ -552,25 +556,31 @@ class AIPlayer(Player):
     # node: the node that is being examined for the score
     # returns:
     # the node with the lowest score at the end
-    def miniMax(self,node):
-        # ipdb.set_trace()
-        node.printNode()
+    def miniMax(self,node,alpha,beta):
+        # node.printNode()
         if node.depth == self.MAX_DEPTH: #or getwinner(node.state) is not None:
             return node
 
+        # considering the heuristic method I AM THE MIN PLAYER
         if node.state.whoseTurn == self.myID:
             #a node with a score that is arbitrarily large
             minScoreNode = StateNode(None,None,0,999999999,None)
             for childNode in self.expandNode(node):
-                newScoreNode = self.miniMax(childNode)
+                newScoreNode = self.miniMax(childNode,alpha,beta)
                 minScoreNode = min([minScoreNode,newScoreNode], key=attrgetter('cost'))
+                beta = min(beta,newScoreNode.cost)
+                if beta <= alpha:
+                    break
             return minScoreNode
         else:
             #a node with a score that is arbitrarily small
             maxScoreNode = StateNode(None,None,0,-999999999,None)
             for childNode in self.expandNode(node):
-                newScoreNode = self.miniMax(childNode)
+                newScoreNode = self.miniMax(childNode,alpha,beta)
                 maxScoreNode = max([maxScoreNode,newScoreNode], key=attrgetter('cost'))
+                alpha = max(alpha,newScoreNode.cost)
+                if beta <= alpha:
+                    break
             return maxScoreNode
 
 ##
@@ -598,32 +608,36 @@ class StateNode:
 # Param: list of nodes
 # returns the lowest or highest cost node based on what you want
 def minMaxNode(nodes,minimum=True):
-    if minimum:
-        move = min(nodes, key=attrgetter('cost'))
-        return move
-    else:
-        move = max(nodes, key=attrgetter('cost'))
-        return move
-
-
     # if minimum:
-        # if len(nodes) < 2:
-            # return nodes[0]
-        # else:
-            # bestNode = nodes[0]
-            # for node in nodes[1:]:
-                # if node.cost < bestNode.cost:
-                    # bestNode = node
+        # move = min(nodes, key=attrgetter('cost'))
+        # return move
     # else:
-        # if len(nodes) < 2:
-            # return nodes[0]
-        # else:
-            # bestNode = nodes[0]
-            # for node in nodes[1:]:
-                # if node.cost > bestNode.cost:
-                    # bestNode = node
+        # move = max(nodes, key=attrgetter('cost'))
+        # return move
 
-    # return bestNode
+
+    if len(nodes) < 2:
+        return nodes[0]
+    bestNodes = []
+    bestNodes.append(nodes[0])
+    if minimum:
+        for node in nodes[1:]:
+            if node.cost == bestNodes[0].cost:
+                bestNodes.append(node)
+
+            elif node.cost < bestNodes[0].cost:
+                bestNodes.clear()
+                bestNodes.append(node)
+    else:
+        for node in nodes[1:]:
+            if node.cost == bestNodes[0].cost:
+                bestNodes.append(node)
+
+            elif node.cost > bestNodes[0].cost:
+                bestNodes.clear()
+                bestNodes.append(node)
+
+    return bestNodes[random.randint(0,len(bestNodes)-1)]
 
 ##
 #   parentMove()
