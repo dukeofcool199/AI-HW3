@@ -12,7 +12,6 @@ from GameState import *
 from AIPlayerUtils import *
 from operator import attrgetter
 import math
-import ipdb
 
 from Game import *
 
@@ -50,8 +49,9 @@ class AIPlayer(Player):
         self.myConstr = None
         self.foodDist = None
         self.enemyFoodDist = None
-        self.MAX_DEPTH = 3
+        self.MAX_DEPTH = 2
         self.myID = inputPlayerId
+        self.minOrMax = 'max'
         MYID = inputPlayerId
 
         self.bestFoodConstr = None
@@ -141,12 +141,12 @@ class AIPlayer(Player):
         # for x in range(6):
             # if len(frontierNodes) < 1:
                 # break
-            # bn = minMaxNode(frontierNodes,minimum=True)
+            # bn = bestNode(frontierNodes,minimum=True)
             # frontierNodes.remove(bn)
             # expandedNodes.append(bn)
             # frontierNodes.extend(self.expandNode(bn))
 
-        return parentMove(bn)
+        # return parentMove(bn)
 
     ##
     # firstTurn
@@ -552,22 +552,46 @@ class AIPlayer(Player):
         return nodeList
 
 
+    ## queenUtility
+    # params:
+    # state: the state to evaluate
+    # a utility that just mkaes the queen cower in the corner
+    # to prove that the miniman function is working does not acutally 
+    # contribute to the final product
     def queenUtility(self,state):
-        myInv = getCurrPlayerInventory(state)
+        if state.inventories[0].player == self.myID:
+            myInv = state.inventories[0]
+        else:
+            myInv = state.inventories[1]
+
         queen = getAntList(state,self.myID,(QUEEN,))
-        return stepsToReach(state,queen[0].coords,(0,0))
-    
+        queenTotal = stepsToReach(state,queen[0].coords,(0,0))
+        return queenTotal
+
     def BFGUtility(self,state):
-        myInv = getCurrPlayerInventory(state)
+        myInv = state.inventories[self.myID]
+        foodTotal = myInv.foodCount * 100
+        queen = getAntList(state,self.myID,(QUEEN,))
+        #have the queen move to the far left but dont stand on food
+        if approxDist(self.bestFood.coords,(0,2)): 
+            queenTotal = -stepsToReach(state,queen[0].coords,(0,2))
+        else:
+            queenTotal = -stepsToReach(state,queen[0].coords,(0,2))
+
         workers = getAntList(state,self.myID,(WORKER,))
-        total = 0
-        total += myInv.foodCount * 5
+        if len(workers) < 2:
+            workerTotal = 0
+        else:
+            workerTotal = 100
         # for worker in workers:
-            # total += 
 
-        return total 
+            # if worker.carrying:
+                # if worker
 
-    ## # miniMax
+        fullTotal = foodTotal + workerTotal + queenTotal 
+        return fullTotal
+
+    ## # bestFoodx
     # params:
     # node: the node that is being examined for the score
     # returns:
@@ -578,9 +602,7 @@ class AIPlayer(Player):
             return node
 
         newNodes = self.expandNode(node)
-        newNodes.sort(key=lambda node: node.cost) 
-        # if len(newNodes) > 1:
-            # newNodes = newNodes[len(newNodes)//2:]
+
         # considering the heuristic method I AM THE MIN PLAYER
         if node.state.whoseTurn == 1 - self.myID:
             #a node with a score that is arbitrarily large
@@ -592,6 +614,7 @@ class AIPlayer(Player):
                 if beta <= alpha:
                     break
             return minScoreNode
+        # otherwise i am the MAX PLAYER
         else:
             #a node with a score that is arbitrarily small
             maxScoreNode = StateNode(None,None,0,-999999999,None)
@@ -624,10 +647,10 @@ class StateNode:
             print("player: enemy")
 
 ##
-#   minMaxNode
+#   bestNode
 # Param: list of nodes
 # returns the lowest or highest cost node based on what you want
-def minMaxNode(nodes,minimum=True):
+def bestNode(nodes,minimum=False):
     # if minimum:
         # move = min(nodes, key=attrgetter('cost'))
         # return move
@@ -724,6 +747,6 @@ nodeList = [StateNode(queenMove,basicState,0,testPlayer.heuristicStepsToGoal_rya
 testPlayer.expandNode(nodeList[0])
 testPlayer.getMove(basicState)
 
-returnedNode = minMaxNode(nodeList)
+returnedNode = bestNode(nodeList)
 if returnedNode.move.coordList != [(0,0)] or returnedNode.move.moveType != 0 or returnedNode.move.buildType != None:
     print("Error with bestNode Return")
